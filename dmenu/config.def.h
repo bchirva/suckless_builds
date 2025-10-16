@@ -28,3 +28,6 @@ static const char worddelimiters[] = " ";
 
 /* Size of the window border */
 static unsigned int border_width = 2;
+static int horizpadbar = 2;                 /* horizontal padding */
+static int vertpadbar = 16;                  /* vertical padding */
+
