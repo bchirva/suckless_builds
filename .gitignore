@@ -1,0 +1,6 @@
+**/compile_commands.json
+**/.cache
+**/*.o
+**/*.orig
+**/*.rej
+*/config.h
