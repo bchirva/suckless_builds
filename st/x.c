@@ -166,7 +166,7 @@ typedef struct {
 
 static inline ushort sixd_to_16bit(int);
 static int xmakeglyphfontspecs(XftGlyphFontSpec *, const Glyph *, int, int, int);
-static void xdrawglyphfontspecs(const XftGlyphFontSpec *, Glyph, int, int, int);
+static void xdrawglyphfontspecs(const XftGlyphFontSpec *, Glyph, int, int, int, int);
 static void xdrawglyph(Glyph, int, int);
 static void xdrawimages(Glyph, Line, int x1, int y1, int x2);
 static void xdrawoneimagecell(Glyph, int x, int y);
@@ -1527,7 +1527,7 @@ xdrawundercurl(Draw draw, Color *color, int x, int y, int w, int h, int thick)
 }
 
 void
-xdrawglyphfontspecs(const XftGlyphFontSpec *specs, Glyph base, int len, int x, int y)
+xdrawglyphfontspecs(const XftGlyphFontSpec *specs, Glyph base, int len, int x, int y, int dmode)
 {
 	int charlen = len * ((base.mode & ATTR_WIDE) ? 2 : 1);
 	int winx = win.hborderpx + x * win.cw, winy = win.vborderpx + y * win.ch,
@@ -1618,30 +1618,25 @@ xdrawglyphfontspecs(const XftGlyphFontSpec *specs, Glyph base, int len, int x, i
 	if (base.mode & ATTR_INVISIBLE)
 		fg = bg;
 
-	/* Intelligent cleaning up of the borders. */
-	if (x == 0) {
-		xclear(0, (y == 0)? 0 : winy, win.hborderpx,
-			winy + win.ch +
-			((winy + win.ch >= win.vborderpx + win.th)? win.h : 0));
-	}
-	if (winx + width >= win.hborderpx + win.tw) {
-		xclear(winx + width, (y == 0)? 0 : winy, win.w,
-			((winy + win.ch >= win.vborderpx + win.th)? win.h : (winy + win.ch)));
-	}
-	if (y == 0)
-		xclear(winx, 0, winx + width, win.vborderpx);
-	if (winy + win.ch >= win.vborderpx + win.th)
-		xclear(winx, winy + win.ch, winx + width, win.h);
+    if (dmode & DRAW_BG) {
+        /* Intelligent cleaning up of the borders. */
+        if (x == 0) {
+            xclear(0, (y == 0)? 0 : winy, win.hborderpx,
+                winy + win.ch +
+                ((winy + win.ch >= win.vborderpx + win.th)? win.h : 0));
+        }
+        if (winx + width >= win.hborderpx + win.tw) {
+            xclear(winx + width, (y == 0)? 0 : winy, win.w,
+                ((winy + win.ch >= win.vborderpx + win.th)? win.h : (winy + win.ch)));
+        }
+        if (y == 0)
+            xclear(winx, 0, winx + width, win.vborderpx);
+        if (winy + win.ch >= win.vborderpx + win.th)
+            xclear(winx, winy + win.ch, winx + width, win.h);
 
-	/* Clean up the region we want to draw to. */
-	XftDrawRect(xw.draw, bg, winx, winy, width, win.ch);
-
-	/* Set the clip region because Xft is sometimes dirty. */
-	r.x = 0;
-	r.y = 0;
-	r.height = win.ch;
-	r.width = width;
-	XftDrawSetClipRectangles(xw.draw, winx, winy, &r, 1);
+        /* Clean up the region we want to draw to. */
+        XftDrawRect(xw.draw, bg, winx, winy, width, win.ch);
+    }
 
 	/* Decoration color. */
 	Color decor;
@@ -1671,44 +1666,43 @@ xdrawglyphfontspecs(const XftGlyphFontSpec *specs, Glyph base, int len, int x, i
 	/* The total thickness of an undercurl. */
 	int curlh = thick * 2 + roundf(fthick * 0.75);
 
-	/* Render the underline before the glyphs. */
-	if (base.mode & ATTR_UNDERLINE) {
-		uint32_t style = tgetdecorstyle(&base);
-		int liney = winy + dc.font.ascent + gap;
-		/* Adjust liney to guarantee that a single underline fits. */
-		liney -= MAX(0, liney + thick - (winy + win.ch));
-		if (style == UNDERLINE_DOUBLE) {
-			liney -= MAX(0, liney + doubleh - (winy + win.ch));
-			XftDrawRect(xw.draw, &decor, winx, liney, width, thick);
-			XftDrawRect(xw.draw, &decor, winx,
-				    liney + doubleh - thick, width, thick);
-		} else if (style == UNDERLINE_DOTTED) {
-			xdrawunderdashed(xw.draw, &decor, winx, liney, width,
-					 thick * 2, 0.5, thick);
-		} else if (style == UNDERLINE_DASHED) {
-			int wavelen = MAX(2, win.cw * 0.9);
-			xdrawunderdashed(xw.draw, &decor, winx, liney, width,
-					 wavelen, 0.65, thick);
-		} else if (style == UNDERLINE_CURLY) {
-			liney -= MAX(0, liney + curlh - (winy + win.ch));
-			xdrawundercurl(xw.draw, &decor, winx, liney, width,
-				       curlh, thick);
-		} else {
-			XftDrawRect(xw.draw, &decor, winx, liney, width, thick);
-		}
-	}
+    if (dmode & DRAW_FG) {
+        /* Render the glyphs. */
+        XftDrawGlyphFontSpec(xw.draw, fg, specs, len);
 
-	/* Render the glyphs. */
-	XftDrawGlyphFontSpec(xw.draw, fg, specs, len);
+        /* Render the underline before the glyphs. */
+        if (base.mode & ATTR_UNDERLINE) {
+            uint32_t style = tgetdecorstyle(&base);
+            int liney = winy + dc.font.ascent + gap;
+            /* Adjust liney to guarantee that a single underline fits. */
+            liney -= MAX(0, liney + thick - (winy + win.ch));
+            if (style == UNDERLINE_DOUBLE) {
+                liney -= MAX(0, liney + doubleh - (winy + win.ch));
+                XftDrawRect(xw.draw, &decor, winx, liney, width, thick);
+                XftDrawRect(xw.draw, &decor, winx,
+                        liney + doubleh - thick, width, thick);
+            } else if (style == UNDERLINE_DOTTED) {
+                xdrawunderdashed(xw.draw, &decor, winx, liney, width,
+                         thick * 2, 0.5, thick);
+            } else if (style == UNDERLINE_DASHED) {
+                int wavelen = MAX(2, win.cw * 0.9);
+                xdrawunderdashed(xw.draw, &decor, winx, liney, width,
+                         wavelen, 0.65, thick);
+            } else if (style == UNDERLINE_CURLY) {
+                liney -= MAX(0, liney + curlh - (winy + win.ch));
+                xdrawundercurl(xw.draw, &decor, winx, liney, width,
+                           curlh, thick);
+            } else {
+                XftDrawRect(xw.draw, &decor, winx, liney, width, thick);
+            }
+        }
 
-	/* Render strikethrough. Alway use the fg color. */
-	if (base.mode & ATTR_STRUCK) {
-		XftDrawRect(xw.draw, fg, winx, winy + 2 * dc.font.ascent / 3,
-			    width, thick);
-	}
-
-	/* Reset clip to none. */
-	XftDrawSetClip(xw.draw, 0);
+        /* Render strikethrough. Alway use the fg color. */
+        if (base.mode & ATTR_STRUCK) {
+            XftDrawRect(xw.draw, fg, winx, winy + 2 * dc.font.ascent / 3,
+                    width, thick);
+        }
+    }
 }
 
 void
@@ -1718,7 +1712,7 @@ xdrawglyph(Glyph g, int x, int y)
 	XftGlyphFontSpec spec;
 
 	numspecs = xmakeglyphfontspecs(&spec, &g, 1, x, y);
-	xdrawglyphfontspecs(&spec, g, numspecs, x, y);
+	xdrawglyphfontspecs(&spec, g, numspecs, x, y, DRAW_BG | DRAW_FG);
 	if (g.mode & ATTR_IMAGE) {
 		gr_start_drawing(xw.buf, win.cw, win.ch);
 		xdrawoneimagecell(g, x, y);
@@ -1727,14 +1721,17 @@ xdrawglyph(Glyph g, int x, int y)
 }
 
 void
-xdrawcursor(int cx, int cy, Glyph g, int ox, int oy, Glyph og)
+xdrawcursor(int cx, int cy, Glyph g, int ox, int oy, Glyph og, Line line, int len)
 {
 	Color drawcol;
 
 	/* remove the old cursor */
 	if (selected(ox, oy))
 		og.mode ^= ATTR_REVERSE;
-	xdrawglyph(og, ox, oy);
+
+    /* Redraw the line where cursor was previously.
+	 * It will restore wide glyphs and ligatures broken by the cursor. */
+	xdrawline(line, 0, oy, len);
 
 	if (IS_SET(MODE_HIDE))
 		return;
@@ -1996,36 +1993,44 @@ xstartdraw(void)
 void
 xdrawline(Line line, int x1, int y1, int x2)
 {
-	int i, x, ox, numspecs;
+	int i, x, ox, numspecs, numspecs_cached;
 	Glyph base, new;
-	XftGlyphFontSpec *specs = xw.specbuf;
 
-	numspecs = xmakeglyphfontspecs(specs, &line[x1], x2 - x1, x1, y1);
-	i = ox = 0;
-	for (x = x1; x < x2 && i < numspecs; x++) {
-		new = line[x];
-		if (new.mode == ATTR_WDUMMY)
-			continue;
-		if (selected(x, y1))
-			new.mode ^= ATTR_REVERSE;
-		if (i > 0 && ATTRCMP(base, new)) {
-			xdrawglyphfontspecs(specs, base, i, ox, y1);
-			if (base.mode & ATTR_IMAGE)
-				xdrawimages(base, line, ox, y1, x);
-			specs += i;
-			numspecs -= i;
-			i = 0;
-		}
-		if (i == 0) {
-			ox = x;
-			base = new;
-		}
-		i++;
-	}
-	if (i > 0)
-		xdrawglyphfontspecs(specs, base, i, ox, y1);
-	if (i > 0 && base.mode & ATTR_IMAGE)
-		xdrawimages(base, line, ox, y1, x);
+    XftGlyphFontSpec *specs;
+
+	numspecs_cached = xmakeglyphfontspecs(xw.specbuf, &line[x1], x2 - x1, x1, y1);
+
+	/* Draw line in 2 passes: background and foreground. This way wide glyphs
+       won't get truncated (#223) */
+	for (int dmode = DRAW_BG; dmode <= DRAW_FG; dmode <<= 1) {
+		specs = xw.specbuf;
+		numspecs = numspecs_cached;
+		i = ox = 0;
+		for (x = x1; x < x2 && i < numspecs; x++) {
+			new = line[x];
+			if (new.mode == ATTR_WDUMMY)
+				continue;
+			if (selected(x, y1))
+				new.mode ^= ATTR_REVERSE;
+			if (i > 0 && ATTRCMP(base, new)) {
+				xdrawglyphfontspecs(specs, base, i, ox, y1, dmode);
+                if (base.mode & ATTR_IMAGE)
+                    xdrawimages(base, line, ox, y1, x);
+				specs += i;
+				numspecs -= i;
+				i = 0;
+			}
+			if (i == 0) {
+				ox = x;
+				base = new;
+			}
+			i++;
+        }
+        if (i > 0)
+            xdrawglyphfontspecs(specs, base, i, ox, y1, dmode);
+        if (i > 0 && base.mode & ATTR_IMAGE)
+            xdrawimages(base, line, ox, y1, x);
+    }
 }
 
 void
