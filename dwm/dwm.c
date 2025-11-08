@@ -730,6 +730,7 @@ drawbar(Monitor *m)
 	int x, w, tw = 0;
 	unsigned int i, occ = 0, urg = 0;
 	Client *c;
+    const char* icon = NULL;
 
 	if (!m->showbar)
 		return;
@@ -748,9 +749,15 @@ drawbar(Monitor *m)
 	}
 	x = 0;
 	for (i = 0; i < LENGTH(tags); i++) {
+        if (m->tagset[m->seltags] & 1 << i || occ & 1 << i) {
+            icon = tag_icon_fill;
+        } else {
+            icon = tag_icon_outline;
+        }
+
 		w = TEXTW(tags[i]);
 		drw_setscheme(drw, scheme[m->tagset[m->seltags] & 1 << i ? SchemeSel : SchemeNorm]);
-		drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i);
+		drw_text(drw, x, 0, w, bh, lrpad / 2, icon, urg & 1 << i);
 		x += w;
 	}
 	w = TEXTW(m->ltsymbol);
