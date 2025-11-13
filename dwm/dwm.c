@@ -723,7 +723,7 @@ void
 drawbar(Monitor *m)
 {
 	int x, w, tw = 0;
-	unsigned int i, occ = 0, urg = 0;
+	unsigned int i, occ = 0, urg = 0, used = 0;
 	Client *c;
     const char* icon = NULL;
 
@@ -743,7 +743,15 @@ drawbar(Monitor *m)
 			urg |= c->tags;
 	}
 	x = 0;
+
 	for (i = 0; i < LENGTH(tags); i++) {
+        used = LENGTH(tags) - (i + 1);
+        if (m->tagset[m->seltags] & 1 << used || occ & 1 << used) {
+            break;
+        }
+    }
+
+	for (i = 0; i < (used + 1); i++) {
         if (m->tagset[m->seltags] & 1 << i || occ & 1 << i) {
             icon = tag_icon_fill;
         } else {
