@@ -723,7 +723,7 @@ void
 drawbar(Monitor *m)
 {
 	int x, w, tw = 0;
-	unsigned int i, occ = 0, urg = 0, used = 0;
+	unsigned int i, occ = 0, urg = 0;
 	Client *c;
     const char* icon = NULL;
 
@@ -745,20 +745,15 @@ drawbar(Monitor *m)
 	x = 0;
 
 	for (i = 0; i < LENGTH(tags); i++) {
-        used = LENGTH(tags) - (i + 1);
-        if (m->tagset[m->seltags] & 1 << used || occ & 1 << used) {
-            break;
-        }
-    }
 
-	for (i = 0; i < (used + 1); i++) {
-        if (m->tagset[m->seltags] & 1 << i || occ & 1 << i) {
-            icon = tag_icon_fill;
-        } else {
-            icon = tag_icon_outline;
-        }
+        if (!(m->tagset[m->seltags] & 1 << i || occ & 1 << i)) 
+            continue;
 
-		w = TEXTW(tags[i]);
+        icon = m->tagset[m->seltags] & 1 << i 
+            ? tag_icons_fill[i] 
+            : tag_icons_outline[i];
+
+		w = TEXTW(icon);
 		drw_setscheme(drw, scheme[m->tagset[m->seltags] & 1 << i ? SchemeSel : SchemeNorm]);
 		drw_text(drw, x, 0, w, bh, lrpad / 2, icon, urg & 1 << i);
 		x += w;
