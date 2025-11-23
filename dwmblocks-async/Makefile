@@ -31,7 +31,10 @@ ifeq ($(DEBUG), 1)
 	CFLAGS += -g
 endif
 
-all: $(BUILD_DIR)/$(BIN)
+all: config.h $(BUILD_DIR)/$(BIN)
+
+config.h:
+	cp config.def.h $@
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c config.h
 	$Qmkdir -p $(@D)
