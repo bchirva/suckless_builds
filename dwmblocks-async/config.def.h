@@ -18,14 +18,13 @@
 
 // Define blocks for the status feed as X(icon, cmd, interval, signal).
 #define BLOCKS(X)             \
-    X("", "status-ffmpeg-record-icon icon", 1, 0) \
-    X("", "status-music status", 1, 0) \
-    X("", "status-audio status output", 1, 0) \
-    X("", "status-audio status input", 1, 0) \
-    X("", "status-network status", 5, 0) \
-    X("", "status-weather", 3600, 0) \
-    X(" ", "date '+%H:%M'", 5, 0)
-
-    // X("", "status-music.sh status", 1, 0) 
-    // X("", "status-bluetooth.sh status", 5, 0) 
+    X("", "status-ffmpeg-record", 1, 1) \
+    X("", "status-music", 1, 2) \
+    X("", "status-audio output", 1, 3) \
+    X("", "status-audio input", 1, 4) \
+    X("", "status-network", 5, 5) \
+    X("", "status-bluetooth", 5, 6)  \
+    X("", "status-weather", 3600, 7) \
+    X("", "status-date", 5, 8)
+    
 #endif  // CONFIG_H
