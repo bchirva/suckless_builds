@@ -24,7 +24,8 @@
     X("", "status-audio input", 1, 4) \
     X("", "status-network", 5, 5) \
     X("", "status-bluetooth", 5, 6)  \
-    X("", "status-weather", 3600, 7) \
-    X("", "status-date", 5, 8)
+    X("", "status-keyboard", 1, 7)  \
+    X("", "status-weather", 3600, 8) \
+    X("", "status-date", 5, 9)
     
 #endif  // CONFIG_H
